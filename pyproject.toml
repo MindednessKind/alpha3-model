@@ -8,10 +8,16 @@ version = "1.0.0"
 description = "Python 3 library wrapper for SkyLined ALPHA3 alphanumeric shellcode encoder"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {file = "COPYRIGHT.txt"}
+license = {text = "MIT"}
 authors = [
-  {name = "SkyLined"},
+  {name = "MindednessKind", email = "mindednesskind@gmail.com"},
 ]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+]
+
+[project.urls]
+Repository = "https://github.com/MindednessKind/alpha3-model"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

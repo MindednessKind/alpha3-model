@@ -1,3 +1,10 @@
+This file preserves the upstream SkyLined ALPHA3 copyright and license terms.
+The local Python wrapper in this repository is licensed under the MIT License;
+see LICENSE. The MIT license does not relicense the upstream ALPHA3 project or
+the alpha3-python3 submodule.
+
+Upstream SkyLined ALPHA3 license:
+
 Copyright (c) 2003-2010 Berend-Jan "SkyLined" Wever <berendjanwever@gmail.com>
 All rights reserved.
 

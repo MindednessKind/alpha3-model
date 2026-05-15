@@ -143,6 +143,17 @@ payload = alpha3.build(
 - 旧调用入口 `ALPHA3`、`encode`、`shellcode`、`x86`、`x64` 已移除。
 - 上游 ALPHA3 源码通过 `alpha3-python3` 子模块加载，不在 `src/alpha3/` 内维护副本。
 
+## License
+
+当前仓库中的 Python wrapper、部署脚本、测试和文档使用 MIT License：
+
+```text
+Copyright (c) 2026 MindednessKind <mindednesskind@gmail.com>
+```
+
+上游 SkyLined ALPHA3 项目及 `alpha3-python3` 子模块不因此重新授权。
+上游版权和授权条款保留在 `COPYRIGHT.txt` 以及子模块自身的授权文件中。
+
 ## 测试
 
 运行测试：
