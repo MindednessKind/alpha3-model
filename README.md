@@ -36,6 +36,19 @@ git clone --recurse-submodules https://github.com/MindednessKind/alpha3-model.gi
 git submodule update --init --recursive
 ```
 
+一键部署当前模块：
+
+```bash
+python3 deploy.py
+```
+
+这个脚本会初始化/更新 `alpha3-python3` 子模块，执行
+`python3 -m pip install -e .` 安装当前 wrapper，并运行一次
+`import alpha3` 与 `alpha3.build(...)` smoke test。
+如果当前 Python 环境已有满足要求的 setuptools，脚本会自动加
+`--no-build-isolation`，避免在离线环境里为构建依赖访问 PyPI。
+需要标准隔离构建时可传入 `--build-isolation`。
+
 在当前仓库中直接使用：
 
 ```bash
@@ -136,6 +149,12 @@ payload = alpha3.build(
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
+
+检查部署脚本语法：
+
+```bash
+python3 -m py_compile deploy.py
 ```
 
 测试覆盖：
