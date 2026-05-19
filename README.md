@@ -1,14 +1,16 @@
 # alpha3-py
 
-这是一个面向 Python 3 的 ALPHA3 调用入口项目。项目本身不再复制
-SkyLined ALPHA3 的完整源码到 `src/alpha3/`，而是通过项目根目录下的
-`alpha3-python3` Git submodule 加载上游实现：
+Python 3 的 ALPHA3 wrapper。功能很单一：接收 shellcode 和参数，调用 SkyLined 的 ALPHA3 编码器，返回 alphanumeric shellcode。
+
+编码器本体通过子模块引入，不在本仓库中维护：
 
 ```text
 alpha3-python3 -> https://github.com/MindednessKind/alpha3-python3.git
 ```
 
-当前公开 API 只保留一种调用方式：
+这边的代码负责参数整理、调用上游、将结果以 `bytes` 返回。
+
+入口函数是 `alpha3.build(...)`：
 
 ```python
 import alpha3
@@ -22,40 +24,41 @@ payload = alpha3.build(
 )
 ```
 
-## 安装与使用
+## 安装
 
-克隆本仓库时同时拉取上游子模块：
+克隆时带上子模块：
 
 ```bash
 git clone --recurse-submodules https://github.com/MindednessKind/alpha3-model.git
 ```
 
-如果已经克隆过本仓库，初始化子模块：
+已经克隆过的话，补上子模块：
 
 ```bash
 git submodule update --init --recursive
 ```
 
-一键部署当前模块：
+也可以用部署脚本一步完成：
 
 ```bash
 python3 deploy.py
 ```
 
-这个脚本会初始化/更新 `alpha3-python3` 子模块，执行
-`python3 -m pip install -e .` 安装当前 wrapper，并运行一次
-`import alpha3` 与 `alpha3.build(...)` smoke test。
-如果当前 Python 环境已有满足要求的 setuptools，脚本会自动加
-`--no-build-isolation`，避免在离线环境里为构建依赖访问 PyPI。
-需要标准隔离构建时可传入 `--build-isolation`。
+`deploy.py` 会做这几件事：
 
-在当前仓库中直接使用：
+- 初始化或更新 `alpha3-python3` 子模块
+- `pip install -e .` 安装 wrapper
+- 跑一次 smoke test 确认可用
+
+离线环境下，如果本地已有 setuptools，脚本会自动加 `--no-build-isolation` 以避免访问 PyPI。需要标准隔离构建时传 `--build-isolation`。
+
+## 使用
+
+不安装也能用，指定 `PYTHONPATH` 即可：
 
 ```bash
 PYTHONPATH=src python3 your_script.py
 ```
-
-或在脚本中：
 
 ```python
 import alpha3
@@ -67,32 +70,31 @@ payload = alpha3.build(
 )
 ```
 
-`alpha3.build` 返回 `bytes`。输入 shellcode 必须是 bytes-like 对象，且
-ALPHA3 原始约束要求 shellcode 不含 NULL 字节。
+返回值是 `bytes`。输入的 shellcode 需要是 bytes-like 对象，且不能包含 NULL 字节——这是 ALPHA3 本身的限制，wrapper 会提前检查并给出明确报错。
 
-## 参数说明
+## 参数
 
-`alpha3.build(shellcode=None, *, pack, register, arch=None, encode="ascii")`
+```python
+alpha3.build(shellcode=None, *, pack, register, arch=None, encode="ascii")
+```
 
-- `shellcode`：可选。传入时立即生成编码后的 shellcode；不传时返回一个可复用 encoder 函数。
-- `pack`：必填。字符大小写包，可用值包括 `lowercase`、`mixedcase`、`uppercase`，也支持 `lower`、`mix`、`mixed`、`upper` 别名。
-- `register`：必填。ALPHA3 base address/register，例如 `rax`、`eax`、`ecx` 等，具体取决于所选架构和编码器。
-- `arch`：可选。支持 `amd64`、`x86_64`、`x64`、`i386`、`i686`、`x86` 等别名。省略时会读取 `pwn.context.arch`，无法读取 pwntools 时默认使用 x86。
-- `encode`：可选。默认 `ascii`，也支持 `cp437`、`latin-1`、`utf-16` 及对应别名。
+日常使用主要关注 `pack` 和 `register`。`arch` 不传时会读 `pwn.context.arch`，没有 pwntools 则默认 x86。
 
-默认情况下，真正需要用户显式指定的配置只有 `pack` 和 `register`。
+| 参数 | 说明 |
+|------|------|
+| `shellcode` | 可选。传入时直接返回编码结果；不传时返回一个可复用的 encoder 函数 |
+| `pack` | 必填。`mixedcase` / `lowercase` / `uppercase`，也接受 `mix` `lower` `upper` 等缩写 |
+| `register` | 必填。base address register，如 `rax` `eax` `ecx`，可用值取决于架构和编码器 |
+| `arch` | 可选。支持 `amd64` `x86_64` `x64` `i386` `i686` `x86` 等常见写法 |
+| `encode` | 可选，默认 `ascii`。另支持 `cp437` `latin-1` `utf-16` 及对应别名 |
 
-`register` 匹配大小写不敏感。对 x86 ascii mixedcase countslide
-寄存器形式，wrapper 会把 `countslide:eax+...` 这类输入规范化为上游
-decoder 文件使用的 `countslide:EAX+...` 形式。
+register 匹配不区分大小写。countslide 格式也做了兼容处理，`countslide:eax+...` 会自动转为上游需要的 `countslide:EAX+...`。
 
 ## 示例
 
-直接生成 amd64 alphanumeric shellcode：
+amd64：
 
 ```python
-import alpha3
-
 payload = alpha3.build(
     b"\x90\x90\xcc",
     arch="amd64",
@@ -101,11 +103,9 @@ payload = alpha3.build(
 )
 ```
 
-生成 x86 uppercase payload：
+x86 uppercase：
 
 ```python
-import alpha3
-
 payload = alpha3.build(
     b"\x90\x90\xcc",
     arch="i386",
@@ -114,49 +114,30 @@ payload = alpha3.build(
 )
 ```
 
-复用 encoder：
+同一组参数需要反复使用时，可以先获取 encoder：
 
 ```python
-import alpha3
-
 enc = alpha3.build(arch="amd64", pack="mixedcase", register="rax")
 payload = enc(b"\x90\x90\xcc")
 ```
 
-配合 pwntools 的 `context.arch`：
+配合 pwntools，由 context 决定架构：
 
 ```python
 from pwn import context
 import alpha3
 
 context.arch = "amd64"
-payload = alpha3.build(
-    b"\x90\x90\xcc",
-    pack="mixedcase",
-    register="rax",
-)
+payload = alpha3.build(b"\x90\x90\xcc", pack="mixedcase", register="rax")
 ```
 
-## 当前约束
+## 约束
 
-- 公开入口只保留 `import alpha3` 与 `alpha3.build(...)`。
-- 旧调用入口 `ALPHA3`、`encode`、`shellcode`、`x86`、`x64` 已移除。
-- 上游 ALPHA3 源码通过 `alpha3-python3` 子模块加载，不在 `src/alpha3/` 内维护副本。
-
-## License
-
-当前仓库中的 Python wrapper、部署脚本、测试和文档使用 MIT License：
-
-```text
-Copyright (c) 2026 MindednessKind <mindednesskind@gmail.com>
-```
-
-上游 SkyLined ALPHA3 项目及 `alpha3-python3` 子模块不因此重新授权。
-上游版权和授权条款保留在 `COPYRIGHT.txt` 以及子模块自身的授权文件中。
+- 公开接口只有 `import alpha3` 和 `alpha3.build(...)`。
+- 旧入口 `ALPHA3`、`encode`、`shellcode`、`x86`、`x64` 已移除。
+- 上游源码只从子模块加载，`src/alpha3/` 中不维护副本。
 
 ## 测试
-
-运行测试：
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
@@ -168,13 +149,14 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 python3 -m py_compile deploy.py
 ```
 
-测试覆盖：
+测试覆盖范围：子模块存在性与远程地址、amd64/x86 编码调用、countslide 大小写兼容、默认 encode 值、省略 shellcode 返回 encoder、NULL 字节抛出 ValueError、从 pwntools context 读取架构、旧入口不可导入。
 
-- `alpha3-python3` 子模块是否存在并指向 `https://github.com/MindednessKind/alpha3-python3.git`
-- `alpha3.build(...)` 的 amd64/x86 调用
-- x86 countslide register 参数大小写兼容
-- `encode="ascii"` 默认值
-- 省略 shellcode 时返回可复用 encoder
-- 包含 NULL 字节的输入会稳定抛出 `ValueError`
-- 从 `pwn.context.arch` 读取架构
-- 旧入口模块不可导入
+## License
+
+本仓库中的 wrapper、部署脚本、测试和文档使用 MIT License：
+
+```text
+Copyright (c) 2026 MindednessKind <mindednesskind@gmail.com>
+```
+
+这不影响上游 ALPHA3 的授权。上游版权和许可条款以 `COPYRIGHT.txt` 及子模块自身的授权文件为准。
